@@ -1,18 +1,23 @@
 # Lines marked python_version < '3.11' (or == '3.7' / == '3.9') are legacy:
 # they serve Buster/Bullseye images and Bookworm rabbits whose venv has not
 # been rebuilt yet. Delete them once all rabbits run Bookworm or later.
+# Python 3.11 = Bookworm, Python 3.13 = Trixie: Raspberry Pi wheels come from
+# piwheels, which does not build every release for both versions.
 # Direct dependencies
 wheel
-Django==4.2.18; python_version != '3.7'
+# Django 4.2 LTS ended in April 2026, 5.2 LTS is supported until April 2028
+Django==5.2.19; python_version >= '3.11'
+Django==4.2.18; python_version > '3.7' and python_version < '3.11'
 Django==3.2.25; python_version == '3.7'
 django-stubs==1.11.0; python_version < '3.11'
-django-stubs==4.2.7; python_version >= '3.11'
+django-stubs==5.2.9; python_version >= '3.11'
 django-stubs-ext==0.4.0; python_version < '3.11'
-django-stubs-ext==4.2.7; python_version >= '3.11'
+django-stubs-ext==5.2.9; python_version >= '3.11'
 # mypy 0.950 parses stubs with Python 3.6 grammar and cannot read the
 # current NumPy/types-pytz stubs installed on Python 3.11
 mypy==0.950; python_version < '3.11'
-mypy==1.7.1; python_version >= '3.11'
+# django-stubs 5.2 needs mypy >= 1.13; mypy 1.19+ needs librt (no wheels)
+mypy==1.18.2; python_version >= '3.11'
 # pytest-django 3.8 imports pkg_resources, removed in setuptools 81
 setuptools<81; python_version >= '3.11'
 types-pytz==2026.6.0.20261122; python_version >= '3.11'
@@ -23,7 +28,8 @@ Mastodon.py==1.5.1
 meteofrance-api==1.4.0; python_version != '3.7'
 meteofrance-api==1.2.0; python_version == '3.7'
 mpg123==0.4
-psycopg2-binary==2.9.3
+psycopg2-binary==2.9.3; python_version < '3.11'
+psycopg2-binary==2.9.13; python_version >= '3.11'
 pytest==7.4.4
 #pytest-django==4.5.2
 pytest-django==3.8.0
@@ -59,8 +65,12 @@ https://github.com/pguyot/py-kaldi-asr/releases/download/v0.5.3/py_kaldi_asr-0.5
 https://github.com/Wulfaz/py-kaldi-asr/releases/download/v0.6.0/py_kaldi_asr-0.6.0-cp311-cp311-linux_armv6l.whl; sys_platform == 'linux' and 'armv6l' in platform_machine and python_version == '3.11'
 https://github.com/Wulfaz/py-kaldi-asr/releases/download/v0.6.0/py_kaldi_asr-0.6.0-cp311-cp311-linux_armv7l.whl; sys_platform == 'linux' and 'armv7l' in platform_machine and python_version == '3.11'
 https://github.com/Wulfaz/py-kaldi-asr/releases/download/v0.6.0/py_kaldi_asr-0.6.0-cp311-cp311-linux_aarch64.whl; sys_platform == 'linux' and 'aarch64' in platform_machine and python_version == '3.11'
+# Python 3.13 (Trixie): same code, built on Trixie against the same Kaldi
+https://github.com/Wulfaz/py-kaldi-asr/releases/download/v0.6.1/py_kaldi_asr-0.6.1-cp313-cp313-linux_armv6l.whl; sys_platform == 'linux' and 'armv6l' in platform_machine and python_version == '3.13'
+https://github.com/Wulfaz/py-kaldi-asr/releases/download/v0.6.1/py_kaldi_asr-0.6.1-cp313-cp313-linux_armv7l.whl; sys_platform == 'linux' and 'armv7l' in platform_machine and python_version == '3.13'
+https://github.com/Wulfaz/py-kaldi-asr/releases/download/v0.6.1/py_kaldi_asr-0.6.1-cp313-cp313-linux_aarch64.whl; sys_platform == 'linux' and 'aarch64' in platform_machine and python_version == '3.13'
 git+https://github.com/pguyot/py-kaldi-asr@v0.5.3; python_version < '3.11' and (sys_platform != 'linux' or ('armv6l' not in platform_machine and 'armv7l' not in platform_machine and 'aarch64' not in platform_machine) or (python_version != '3.7' and python_version != '3.9'))
-py-kaldi-asr @ git+https://github.com/Wulfaz/py-kaldi-asr@v0.6.0; python_version >= '3.11' and (python_version != '3.11' or (sys_platform != 'linux' or ('armv6l' not in platform_machine and 'armv7l' not in platform_machine and 'aarch64' not in platform_machine)))
+py-kaldi-asr @ git+https://github.com/Wulfaz/py-kaldi-asr@v0.6.1; python_version >= '3.11' and ((python_version != '3.11' and python_version != '3.13') or (sys_platform != 'linux' or ('armv6l' not in platform_machine and 'armv7l' not in platform_machine and 'aarch64' not in platform_machine)))
 
 https://github.com/pguyot/snips-nlu-parsers/releases/download/v0.4.3/snips_nlu_parsers-0.4.3-cp37-cp37m-linux_armv6l.whl; sys_platform == 'linux' and 'armv6l' in platform_machine and python_version == '3.7'
 https://github.com/pguyot/snips-nlu-parsers/releases/download/v0.4.3/snips_nlu_parsers-0.4.3-cp39-cp39-linux_armv6l.whl; sys_platform == 'linux' and 'armv6l' in platform_machine and python_version == '3.9'
@@ -102,7 +112,9 @@ regex==2022.3.2
 typed_ast==1.5.2; python_version < '3.11'
 click==8.1.2
 pytz==2024.1
-asgiref==3.6.0
+asgiref==3.6.0; python_version < '3.11'
+# Django 5.2 needs asgiref >= 3.8.1
+asgiref==3.8.1; python_version >= '3.11'
 sqlparse==0.4.4; python_version == '3.7'
 sqlparse==0.5.0; python_version != '3.7'
 importlib_metadata==4.2.0
@@ -132,10 +144,12 @@ identify==2.4.11
 cfgv==3.3.1
 Cython==0.29.30
 numpy==1.21.4; python_version < '3.11'
-numpy==2.4.6; python_version >= '3.11'
+numpy==2.4.6; python_version >= '3.11' and python_version < '3.13'
+numpy==2.4.5; python_version >= '3.13'
 # Latest scipy compatible with snips-nlu
 scipy==1.6.2; python_version < '3.11'
-scipy==1.17.1; python_version >= '3.11'
+scipy==1.17.1; python_version >= '3.11' and python_version < '3.13'
+scipy==1.17.0; python_version >= '3.13'
 num2words==0.5.10
 # Latest scikit-learn compatible with latest snips-nlu
 scikit_learn==0.24.2; python_version < '3.11'
