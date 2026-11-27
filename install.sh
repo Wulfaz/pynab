@@ -94,6 +94,25 @@ build_and_install_driver() {
   done
 }
 
+# Drivers without kernel 6.x support upstream come from Wulfaz forks. Their
+# kernel-6.18 branch builds on Bookworm (6.12) and Trixie (6.18) kernels.
+driver_branch="kernel-6.18"
+
+switch_driver_branch() {
+  # Move a driver clone (in the current directory) to the Wulfaz fork's
+  # driver branch, e.g. from pguyot's repository or the older kernel-6.12
+  # branch. Succeeds only when the clone was switched (it needs a rebuild).
+  repository=${1}
+  if git remote get-url origin | grep -q "Wulfaz/${repository}" \
+     && [ "$(git rev-parse --abbrev-ref HEAD)" = "${driver_branch}" ]; then
+    return 1
+  fi
+  git remote set-url origin https://github.com/Wulfaz/${repository}
+  git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+  git fetch --depth 1 origin ${driver_branch} \
+    && git checkout -B ${driver_branch} origin/${driver_branch}
+}
+
 if [ $upgrade -eq 1 -a $makerfaire2018 -eq 0 -a -d ${inst_dir}/wm8960 ]; then
   echo "Updating sound driver - 2/15" > /tmp/pynab.upgrade
   cd ${inst_dir}/wm8960
@@ -110,15 +129,17 @@ if [ $upgrade -eq 1 ]; then
   if [ -d ${inst_dir}/tagtagtag-ears ]; then
     cd ${inst_dir}/tagtagtag-ears
     sudo chown -R ${uid}:${gid} .
+    ears_switched=0
+    switch_driver_branch tagtagtag-ears && ears_switched=1
     pull=`git pull`
-    if [ "$pull" != "Already up to date." ]; then
+    if [ $ears_switched -eq 1 -o "$pull" != "Already up to date." ]; then
       build_and_install_driver tagtagtag-ears
       sudo touch /tmp/pynab.upgrade.reboot
     fi
   else
     sudo mkdir -p ${inst_dir}/tagtagtag-ears
     sudo chown ${uid}:${gid} ${inst_dir}/tagtagtag-ears
-    git clone -b kernel-6.12 https://github.com/Wulfaz/tagtagtag-ears ${inst_dir}/tagtagtag-ears
+    git clone -b ${driver_branch} https://github.com/Wulfaz/tagtagtag-ears ${inst_dir}/tagtagtag-ears
     cd ${inst_dir}/tagtagtag-ears
     build_and_install_driver tagtagtag-ears
     sudo touch /tmp/pynab.upgrade.reboot
@@ -138,13 +159,7 @@ if [ $upgrade -eq 1 ]; then
     # Move rabbits installed from pguyot/cr14 to the fork, which retries the
     # busy NACK that kernel 6.x reports as -EIO (tags are not read otherwise).
     cr14_switched=0
-    if ! git remote get-url origin | grep -q "Wulfaz/cr14"; then
-      git remote set-url origin https://github.com/Wulfaz/cr14
-      git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-      git fetch --depth 1 origin kernel-6.12 \
-        && git checkout -B kernel-6.12 origin/kernel-6.12 \
-        && cr14_switched=1
-    fi
+    switch_driver_branch cr14 && cr14_switched=1
     pull=`git pull`
     if [ $cr14_switched -eq 1 -o "$pull" != "Already up to date." ]; then
       build_and_install_driver cr14
@@ -153,7 +168,7 @@ if [ $upgrade -eq 1 ]; then
   else
     sudo mkdir -p ${inst_dir}/cr14
     sudo chown ${uid}:${gid} ${inst_dir}/cr14
-    git clone -b kernel-6.12 https://github.com/Wulfaz/cr14 ${inst_dir}/cr14
+    git clone -b ${driver_branch} https://github.com/Wulfaz/cr14 ${inst_dir}/cr14
     cd ${inst_dir}/cr14
     build_and_install_driver cr14
     sudo touch /tmp/pynab.upgrade.reboot
@@ -161,15 +176,17 @@ if [ $upgrade -eq 1 ]; then
   if [ -d ${inst_dir}/st25r391x ]; then
     cd ${inst_dir}/st25r391x
     sudo chown -R ${uid}:${gid} .
+    st25_switched=0
+    switch_driver_branch st25r391x && st25_switched=1
     pull=`git pull`
-    if [ "$pull" != "Already up to date." ]; then
+    if [ $st25_switched -eq 1 -o "$pull" != "Already up to date." ]; then
       build_and_install_driver st25r391x
       sudo touch /tmp/pynab.upgrade.reboot
     fi
   else
     sudo mkdir -p ${inst_dir}/st25r391x
     sudo chown ${uid}:${gid} ${inst_dir}/st25r391x
-    git clone -b kernel-6.12 https://github.com/Wulfaz/st25r391x ${inst_dir}/st25r391x
+    git clone -b ${driver_branch} https://github.com/Wulfaz/st25r391x ${inst_dir}/st25r391x
     cd ${inst_dir}/st25r391x
     build_and_install_driver st25r391x
     # Disable this driver as it conflicts with cr14 (nabboot will do the switch)
@@ -180,7 +197,7 @@ if [ $upgrade -eq 1 ]; then
   fi
 else
   if [ $ci_chroot -eq 0 -a ! -e "/dev/rfid0" -a ! -e "/dev/nfc0" ]; then
-    echo "If you have a TAGTAG with the original RFID card, you may want to install cr14 RFID driver https://github.com/Wulfaz/cr14 (branch kernel-6.12)"
+    echo "If you have a TAGTAG with the original RFID card, you may want to install cr14 RFID driver https://github.com/Wulfaz/cr14 (branch ${driver_branch})"
     echo "If you have a 2022 NFC card, you need to install st25r391x RFID driver https://github.com/pguyot/st25r391x"
   fi
 fi
@@ -258,6 +275,13 @@ if [ $makerfaire2018 -eq 0 ]; then
     if [ "${kaldi_platform}" = "raspbian12-armv7l" ]; then
       kaldi_platform="raspbian12-armv6l"
     fi
+    # Trixie: no Kaldi build for Debian 13 yet, the Bookworm one works (it
+    # only needs the C/C++ runtime, and py-kaldi-asr's cp313 wheels are built
+    # against it)
+    case "${kaldi_platform}" in
+      raspbian13-*) kaldi_platform="raspbian12-armv6l" ;;
+      debian13-aarch64) kaldi_platform="debian12-aarch64" ;;
+    esac
     echo "Installing precompiled ${kaldi_platform} Kaldi into ${kaldi_dir}"
     kaldi_archive="${kaldi_release}/kaldi-${kaldi_release}-linux_${kaldi_platform}.tar.xz"
     wget -O - -q https://github.com/pguyot/kaldi/releases/download/${kaldi_archive} | sudo tar xJ -C / || {
@@ -289,15 +313,22 @@ if [ $makerfaire2018 -eq 0 ]; then
 fi
 
 cd ${root_dir}
-# Bookworm: use the system Python 3.11. Kaldi (py-kaldi-asr 0.6.0), Snips
-# (snips-nlu 0.20.2.2 and its Rust libraries) and their dependencies have
-# Python 3.11 wheels (see requirements.txt). A Python 3.9 virtual env from an
-# earlier install is replaced below, as for any Python version change.
-use_system_python311=0
+# Bookworm and Trixie: use the system Python (3.11 and 3.13). Kaldi
+# (py-kaldi-asr 0.6.x), Snips (snips-nlu 0.20.2.3 and its Rust libraries) and
+# their dependencies have wheels for both (see requirements.txt). A virtual
+# env from an earlier install (Python 3.9, or 3.11 after a dist-upgrade to
+# Trixie) is replaced below, as for any Python version change.
+system_py_ver=""
 if grep -q "^VERSION_CODENAME=bookworm" /etc/os-release && [ -x "$(command -v python3.11)" ]; then
-  use_system_python311=1
+  system_py_ver=3.11
+elif grep -q "^VERSION_CODENAME=trixie" /etc/os-release && [ -x "$(command -v python3.13)" ]; then
+  system_py_ver=3.13
 fi
-if [ $use_system_python311 -eq 0 ] \
+use_system_python=0
+if [ -n "${system_py_ver}" ]; then
+  use_system_python=1
+fi
+if [ $use_system_python -eq 0 ] \
    && [ ! -x "$(command -v python3.9)" -a ! -x "$(command -v python3.7)" ] \
    && grep -q "^VERSION_CODENAME=bookworm" /etc/os-release \
    && [ "$(dpkg --print-architecture)" = "armhf" ]; then
@@ -313,7 +344,7 @@ if [ $use_system_python311 -eq 0 ] \
   sudo apt-get update -y
   sudo apt-get install --no-install-recommends -y python3.9 python3.9-dev
 fi
-if [ $use_system_python311 -eq 0 ] \
+if [ $use_system_python -eq 0 ] \
    && [ -x "$(command -v python3.9)" ] && ! python3.9 -c "import distutils.cmd" 2> /dev/null \
    && grep -q "^VERSION_CODENAME=bookworm" /etc/os-release; then
   # pip needs distutils on Python 3.9. Debian ships it in python3-distutils, whose
@@ -324,14 +355,14 @@ if [ $use_system_python311 -eq 0 ] \
   sudo cp -r /tmp/py39-distutils/usr/lib/python3.9/distutils/. /usr/lib/python3.9/distutils/
   rm -rf /tmp/py39-distutils
 fi
-if [ $use_system_python311 -eq 1 ] ; then
-  py_ver=3.11
+if [ $use_system_python -eq 1 ] ; then
+  py_ver=${system_py_ver}
 elif [ -x "$(command -v python3.9)" ] ; then
   py_ver=3.9
 elif [ -x "$(command -v python3.7)" ] ; then
   py_ver=3.7
 else
-  echo "Please install Python 3.7, 3.9 or 3.11 (you might need to upgrade your Linux distribution)"
+  echo "Please install Python 3.7, 3.9, 3.11 or 3.13 (you might need to upgrade your Linux distribution)"
   exit 1
 fi
 python=python${py_ver}
@@ -367,7 +398,7 @@ if [ $upgrade -eq 1 ]; then
 fi
 # Start with wheel which is required to compile some of the other requirements
 venv/bin/pip install --no-cache-dir wheel
-if [ "${py_ver}" = "3.11" ]; then
+if [ "${py_ver}" = "3.11" -o "${py_ver}" = "3.13" ]; then
   # Bookworm's venv comes with pip 23.0.1, which rejects piwheels wheels whose
   # PEP 658 metadata spells the name differently (scikit_learn vs scikit-learn)
   # and falls back to source builds. pip 25 rejects '#egg=name==version' URLs.
