@@ -10,6 +10,8 @@ Pynab drives Nabaztag (v1) and Nabaztag:tag (v2) rabbits fitted with a TagTagTag
 
 - `bookworm`: development branch. A push runs the Python 3.11 tests and builds an image (no release).
 - `releng`: release branch, fast-forwarded from `bookworm`. A push builds the image and creates a **draft prerelease** tagged `latest`.
+- `release`: what published images and community rabbits follow (the web upgrade page warns when a rabbit does not track `origin/release`). Fast-forward it from `bookworm`, then push a tag: `git push fork bookworm:release`, then `git tag vX.Y.Z+wzA.B.C && git push fork <tag>`. A tag builds the image and a full release (NabBlockly from `master` on Erlang/OTP 24+).
+- Versions: `v<upstream base>+wz<fork version>`. The upstream base stays `1.0.2` until upstream releases again. `wz1.x.y` = Bookworm fixes and features, `wz2.0.0` = Trixie, `wz3.0.0` = Forky.
 - `fl`: f-laurens' branch (Bullseye, Python 3.9), the base of this fork. `nabaztag2018/pynab` is the original upstream.
 - Release gotcha: `marvinpinto/action-automatic-releases` cannot find an existing *draft*, so every `releng` push creates a new draft holding only the commits since the previous build. After each build, copy the previous draft's notes (the "Before you start" section and the full changelog) into the new one, delete the old draft only with the maintainer's OK, then set `tag_name=latest` on the new one (`gh api -X PATCH repos/Wulfaz/pynab/releases/<id>`).
 
