@@ -60,7 +60,7 @@ if [ $ci_chroot -eq 0 -a $makerfaire2018 -eq 0 -a `sudo aplay -L | grep -c "tagt
     echo "Please double-check and restart this script with --makerfaire2018"
   else
     echo "Please install and configure sound card driver:"
-    echo " https://github.com/pguyot/wm8960/tree/tagtagtag-sound"
+    echo " https://github.com/Wulfaz/wm8960/tree/kernel-6.18"
   fi
   exit 1
 fi
@@ -117,8 +117,11 @@ if [ $upgrade -eq 1 -a $makerfaire2018 -eq 0 -a -d ${inst_dir}/wm8960 ]; then
   echo "Updating sound driver - 2/15" > /tmp/pynab.upgrade
   cd ${inst_dir}/wm8960
   sudo chown -R ${uid}:${gid} .
+  # pguyot/wm8960 (tagtagtag-sound) does not build on kernel 6.18
+  wm8960_switched=0
+  switch_driver_branch wm8960 && wm8960_switched=1
   pull=`git pull`
-  if [ "$pull" != "Already up to date." ]; then
+  if [ $wm8960_switched -eq 1 -o "$pull" != "Already up to date." ]; then
     build_and_install_driver wm8960
     sudo touch /tmp/pynab.upgrade.reboot
   fi
@@ -298,6 +301,10 @@ if [ $makerfaire2018 -eq 0 ]; then
     fi
     popd
   fi
+
+  # glibc 2.41 (Trixie) refuses to load Kaldi's OpenBLAS, which is marked
+  # as needing an executable stack: clear the flag (also on older installs).
+  sudo python3 -I ${root_dir}/asr/clear_execstack.py ${kaldi_dir}/tools/OpenBLAS/install/lib/*.so*
 
   sudo mkdir -p "${kaldi_dir}/model"
 

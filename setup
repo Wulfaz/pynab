@@ -49,6 +49,9 @@ st25_branch="kernel-6.18"
 # cr14: retries the busy NACK that kernel 6.x reports as -EIO.
 cr14_repository="Wulfaz/cr14"
 cr14_branch="kernel-6.18"
+# wm8960: clock provider/consumer DAI formats (kernel 6.18).
+wm8960_repository="Wulfaz/wm8960"
+wm8960_branch="kernel-6.18"
 
 LC_ALL=C
 
@@ -277,7 +280,7 @@ build_and_install_driver() {
 echo "Installing sound driver for Ulule 2019 cards."
 sudo mkdir -p ${inst_dir}/wm8960
 sudo chown ${owner}:${group} ${inst_dir}/wm8960
-sudo -u ${owner} git clone --depth 1 -b tagtagtag-sound https://github.com/pguyot/wm8960 ${inst_dir}/wm8960
+sudo -u ${owner} git clone --depth 1 -b ${wm8960_branch} https://github.com/${wm8960_repository} ${inst_dir}/wm8960
 sudo git config --system --add safe.directory ${inst_dir}/wm8960
 cd ${inst_dir}/wm8960
 build_and_install_driver
