@@ -222,7 +222,7 @@ sudo apt-get update -y
 sudo apt-get dist-upgrade -y
 # libatlas-base-dev is gone from Trixie (Kaldi ships its own OpenBLAS).
 atlas=""
-if apt-cache show libatlas-base-dev > /dev/null 2>&1
+if [ -n "$(apt-cache policy libatlas-base-dev 2> /dev/null | awk '$1 == "Candidate:" && $2 != "(none)" { print $2 }')" ]
 then
     atlas="libatlas-base-dev"
 fi

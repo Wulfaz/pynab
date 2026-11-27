@@ -43,7 +43,9 @@ black==24.10.0; python_version != '3.7'
 flake8==5.0.4
 isort==5.10.1
 pre_commit==2.17.0
-pyalsaaudio==0.9.0; sys_platform == 'linux'
+pyalsaaudio==0.9.0; sys_platform == 'linux' and python_version < '3.13'
+# 0.9.0 does not build on Python 3.13 (PyUnicode_AS_DATA was removed)
+pyalsaaudio==0.11.0; sys_platform == 'linux' and python_version >= '3.13'
 rpi-ws281x==4.3.3; sys_platform == 'linux' and ('armv6l' in platform_machine or 'armv7l' in platform_machine or 'aarch64' in platform_machine)
 # Kernel 6.6+ (Bookworm) breaks RPi.GPIO edge detection: Python 3.11 venvs
 # (Bookworm) use its drop-in replacement rpi-lgpio (needs liblgpio-dev)
