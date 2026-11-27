@@ -112,3 +112,6 @@ tmp/
 
 # nabblockly subdirectory
 /nabblockly/
+
+# Claude Code personal notes
+CLAUDE.local.md
