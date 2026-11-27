@@ -1,10 +1,9 @@
 # Nabaztag en Python pour Raspberry Pi
 
-[![python-lint](https://github.com/f-laurens/pynab/actions/workflows/python-lint.yml/badge.svg?branch=fl)](https://github.com/f-laurens/pynab/actions/workflows/python-lint.yml)
-[![build (qemu)](https://github.com/f-laurens/pynab/actions/workflows/arm-runner.yml/badge.svg?branch=fl)](https://github.com/f-laurens/pynab/actions/workflows/arm-runner.yml)
-[![tests](https://github.com/f-laurens/pynab/actions/workflows/tests.yml/badge.svg?branch=fl)](https://github.com/f-laurens/pynab/actions/workflows/tests.yml)
+[![python-lint](https://github.com/Wulfaz/pynab/actions/workflows/python-lint.yml/badge.svg?branch=releng)](https://github.com/Wulfaz/pynab/actions/workflows/python-lint.yml)
+[![build (qemu)](https://github.com/Wulfaz/pynab/actions/workflows/arm-runner.yml/badge.svg?branch=bookworm)](https://github.com/Wulfaz/pynab/actions/workflows/arm-runner.yml)
+[![tests](https://github.com/Wulfaz/pynab/actions/workflows/tests-py311.yml/badge.svg?branch=bookworm)](https://github.com/Wulfaz/pynab/actions/workflows/tests-py311.yml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![codecov](https://codecov.io/gh/f-laurens/pynab/branch/master/graph/badge.svg)](https://codecov.io/gh/f-laurens/pynab)
 [![Twitter](https://img.shields.io/twitter/follow/nabaztagtagtag?label=Follow&style=social)](https://twitter.com/nabaztagtagtag)
 
 ## Cartes
@@ -17,7 +16,9 @@ Les schémas et fichiers de fabrication de ces deux cartes sont dans le reposito
 
 ## Images
 
-Les [releases](https://github.com/nabaztag2018/pynab/releases) sont des images de [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems/) Lite ou [DietPi](https://dietpi.com/) avec Pynab pré-installé.
+Les [releases](https://github.com/Wulfaz/pynab/releases) de ce fork sont des images [DietPi](https://dietpi.com/) basées sur Debian 12 (Bookworm), avec Python 3.11 et Pynab pré-installé. Elles ont été testées sur Raspberry Pi Zero W, dans un Nabaztag et un Nabaztag:tag. Avant de flasher la carte, lisez la section « Before you start » de la release : identifiants par défaut, assistant DietPi à la première connexion SSH, nom d'hôte quand il y a plusieurs lapins sur le même réseau.
+
+Les anciennes images (Raspberry Pi OS ou DietPi en Bullseye) restent disponibles sur le dépôt [d'origine](https://github.com/nabaztag2018/pynab/releases).
 
 Les releases actuelles (>0.7.x) ne fonctionnent pas sur les cartes 2018 (cf [#44](https://github.com/nabaztag2018/pynab/issues/44)).
 
@@ -25,9 +26,9 @@ Les releases actuelles (>0.7.x) ne fonctionnent pas sur les cartes 2018 (cf [#44
 
 ### 0. S'assurer que le système est bien à jour
 
-Le script d'installation requiert une version basée sur Debian 11 (Bullseye), avec Python 3.9.
+Le script d'installation requiert une version basée sur Debian 12 (Bookworm), avec Python 3.11. C'est la seule version testée par l'intégration continue de ce fork.
 
-Debian 10 (Buster), avec Python 3.7 ([Raspberry Pi OS Legacy](https://www.raspberrypi.com/software/operating-systems/#raspberry-pi-os-legacy)), est aussi supporté.
+Debian 11 (Bullseye), avec Python 3.9, et Debian 10 (Buster), avec Python 3.7 ([Raspberry Pi OS Legacy](https://www.raspberrypi.com/software/operating-systems/#raspberry-pi-os-legacy)), sont encore acceptés par le script, sans garantie.
 
 Il est nécessaire que les 'kernel headers' installés via `apt-get` correspondent à la version installée du noyau.
 
@@ -45,13 +46,14 @@ sudo apt-get upgrade
  - Oreilles : [pilote tagtagtag-ears](https://github.com/pguyot/tagtagtag-ears)
 
  - Lecteur RFID :
-   - [pilote CR14](https://github.com/pguyot/cr14) (Nabaztag:tag uniquement, non requis sur les Nabaztag, mais installé par les mises à jour)
+   - [pilote CR14](https://github.com/Wulfaz/cr14/tree/kernel-6.12) (Nabaztag:tag uniquement, non requis sur les Nabaztag, mais installé par les mises à jour). Ce fork du [pilote d'origine](https://github.com/pguyot/cr14) corrige la lecture des tags avec les noyaux 6.x de Bookworm.
    - [pilote st25r391x](https://github.com/pguyot/st25r391x) (carte NFC 2022 pour Nabaztag & Nabaztag:tag)
 
-Les 'kernel headers' sont nécessaires pour la compilation des pilotes:
+Les 'kernel headers' sont nécessaires pour la compilation des pilotes. Sur Bookworm, le paquet correspond au noyau installé (`linux-image-rpi-v6` → `linux-headers-rpi-v6`) :
 ```sh
-sudo apt-get install gcc make raspberrypi-kernel-headers
+sudo apt-get install gcc make device-tree-compiler linux-headers-rpi-v6
 ```
+Sur les versions plus anciennes, le paquet s'appelle `raspberrypi-kernel-headers`.
 
 ### 2. Installer PostgreSQL et les paquets requis
 
@@ -66,7 +68,7 @@ sudo apt-get install alsa-utils xz-utils avahi-daemon
 ### 3. Récupérer le code
 
 ```sh
-git clone https://github.com/nabaztag2018/pynab.git
+git clone -b bookworm https://github.com/Wulfaz/pynab.git
 cd pynab
 ```
 
@@ -91,6 +93,7 @@ Si nécessaire, il est possible de le faire en ligne de commande avec :
 cd pynab
 bash upgrade.sh
 ```
+Sur les images DietPi, Pynab est installé dans `/opt/pynab` et appartient à l'utilisateur `dietpi` : lancez la mise à jour avec cet utilisateur (`cd /opt/pynab && sudo -u dietpi bash upgrade.sh`), pas en `root`.
 
 ## NabBlockly
 
@@ -103,12 +106,15 @@ Voir le [protocole nabd](PROTOCOL.md)
 - `nabd` : démon qui gère le lapin (e/s, chorégraphies)
 - `nab8balld` : démon pour le service gourou
 - `nabairqualityd` : démon pour le service de qualité de l'air
+- `nabbookd` : démon pour le service livres interactifs
 - `nabclockd` : démon pour le service horloge
 - `nabsurprised` : démon pour le service surprises
 - `nabtaichid` : démon pour le service taichi
 - `nabmastodond` : démon pour le service mastodon
 - `nabweatherd` : démon pour le service météo
 - `nabiftttd` : démon pour le service IFTTT
+- `nabradio` : démon pour le service radio
+- `nabwebhook` : démon pour le service webhook
 - `nabweb` : interface web pour la configuration
 
 ## Contribution

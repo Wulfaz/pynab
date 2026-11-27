@@ -4,16 +4,21 @@ Thank you so much for contributing to the project. All contributions are
 welcome. Please take a moment to review these guidelines. Following them will
 ensure the contribution process is easy and effective for everyone involved.
 
+This fork runs Pynab on Debian 12 (Bookworm) with Python 3.11. Its development
+branch is `bookworm`; `releng` is the branch release images are built from.
+Problems that also happen on the [original project](https://github.com/nabaztag2018/pynab)
+are best reported there too.
+
 ## How to contribute to Pynab
 
 ### Reporting bugs
 
-Please **Check [existing issues](https://github.com/nabaztag2018/pynab/issues)** to make sure the
+Please **Check [existing issues](https://github.com/Wulfaz/pynab/issues)** to make sure the
 bug was not already reported. If you are running latest release, make sure the
-bug was not fixed on master branch by checking closed issues as well.
+bug was not fixed on `bookworm` branch by checking closed issues as well.
 
 If you're unable to find an open issue addressing the problem,
-[open a new one](https://github.com/nabaztag2018/pynab/issues/new). Be sure to include as much
+[open a new one](https://github.com/Wulfaz/pynab/issues/new). Be sure to include as much
 relevant information as possible, ideally providing a reproduceable test case
 demonstrating the expected behavior that is not occurring.
 
@@ -29,12 +34,13 @@ project and could simply exploit the [Nabd protocol](PROTOCOL.md) and be install
 
 If you intend to add a new feature or change an existing one, please engage
 discussion first about what you are proposing by filing
-[a new issue](https://github.com/nabaztag2018/pynab/issues/new) or discussing it on the
-[Discussions page](https://github.com/nabaztag2018/pynab/discussions).
+[a new issue](https://github.com/Wulfaz/pynab/issues/new) or discussing it on the
+[community forum](https://tagtagtag.fr/forum/).
 
 ### Submitting patches
 
-Please open a new GitHub pull request with the patch. Before submitting, please
+Please open a new GitHub pull request with the patch, against the `bookworm`
+branch. Before submitting, please
 read the guide below about developing. We are more likely to accept
 patches for existing issues / enhancements.
 
@@ -51,6 +57,11 @@ You can develop directly on your rabbit (Raspberry Pi) that you have of course
 configured with ssh access (make sure you changed the default password). We
 use editors with SFTP support.
 
+On DietPi images, Pynab lives in `/opt/pynab` and belongs to the `dietpi` user:
+run the git commands and `upgrade.sh` below as that user (for instance with
+`sudo -u dietpi`), not as `root`, or the next upgrade will fail on files owned
+by `root`.
+
 If you haven't done so yet, fork the repository on GitHub, then add this fork
 to your rabbit's repository.
 ```
@@ -61,11 +72,13 @@ git remote add fork https://github.com/YOUR_GITHUB_USERNAME/pynab.git
 To develop your code, create a local branch with a name that makes sense.
 ```
 git fetch origin
-git checkout -b feature-name origin/master
+git checkout -b feature-name origin/bookworm
 ```
 
 At anytime, you can run tests locally (on the rabbit) by first stopping pynab
-and services. Hardware tests require root access.
+and services. Hardware tests require root access. Never skip `stop_all`: the
+tests use the same network port as the running `nabd`, and one of them would
+reboot your rabbit.
 ```
 sudo ./venv/bin/python manage.py stop_all
 sudo ./venv/bin/pytest
@@ -81,7 +94,7 @@ Once you are happy with the result, rebase and push it to a dedicated branch on
 your own GitHub fork.
 ```
 git fetch origin
-git rebase origin/master
+git rebase origin/bookworm
 git push fork HEAD:feature-name
 ```
 
@@ -98,15 +111,16 @@ If your pull request is related to an open issue *XXX*, make sure your initial c
 starts with *Resolves #XXX*, so that the pull request is automatically linked to the issue.
 
 Tests will be run through GitHub Actions, covering code style, code quality
-and unit tests.
+and unit tests (Python 3.11), and building a Bookworm image in an emulated
+Raspberry Pi Zero.
 
 If tests fail, fix them and push to the branch, either with new commits or
 by amending. Once tests pass, your request will be reviewed.
 
-At any time, if you did commit your changes, you can go back to master with:
+At any time, if you did commit your changes, you can go back to `bookworm` with:
 ```
 git fetch origin
-git checkout master
+git checkout bookworm
 bash upgrade.sh
 ```
 
@@ -115,9 +129,9 @@ messages, drivers and dependencies.
 
 ## How to test a contributor Pull Request
 
-1. Note the number *XXX* of the PR to test from the [Pull requests page](https://github.com/nabaztag2018/pynab/pulls).
+1. Note the number *XXX* of the PR to test from the [Pull requests page](https://github.com/Wulfaz/pynab/pulls).
 
-2. Go to the pynab folder on your rabbit: `cd $HOME/pynab`
+2. Go to the pynab folder on your rabbit: `cd /opt/pynab` (or `cd $HOME/pynab` on older images)
 
 3. Checkout *PR #XXX* to a new local branch *prxxx* (see [Checking out GitHub pull requests locally](https://docs.github.com/en/github/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally))
 
@@ -129,7 +143,7 @@ messages, drivers and dependencies.
 
 6. Do your tests...
 
-7. Switch back to default (master or release) branch: `git checkout master`
+7. Switch back to the default branch: `git checkout bookworm`
 
 8. Rollback Pynab environment:
      - if needed (when PR had changes in drivers, dependencies, data models or localisation messages) do a full upgrade: `bash upgrade.sh`
