@@ -566,6 +566,8 @@ for service_file in nabd/nabd.socket */*.service ; do
   sudo systemctl enable ${name}
 done
 sudo sed -e "s|/opt/pynab|${root_dir}|g" < nabboot/nabboot.py > /tmp/nabboot.py
+# Trixie's systemd no longer ships this (empty) directory
+sudo mkdir -p /lib/systemd/system-shutdown
 sudo mv /tmp/nabboot.py /lib/systemd/system-shutdown/nabboot.py
 sudo chown root /lib/systemd/system-shutdown/nabboot.py
 sudo chmod +x /lib/systemd/system-shutdown/nabboot.py
