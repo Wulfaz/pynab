@@ -37,7 +37,7 @@ jobs:
             done
             ls -d /lib/modules/*/build
             failed=""
-            for driver in pguyot/wm8960:tagtagtag-sound Wulfaz/tagtagtag-ears:kernel-6.18 Wulfaz/cr14:kernel-6.18 Wulfaz/st25r391x:kernel-6.18
+            for driver in Wulfaz/wm8960:kernel-6.18 Wulfaz/tagtagtag-ears:kernel-6.18 Wulfaz/cr14:kernel-6.18 Wulfaz/st25r391x:kernel-6.18
             do
               repo=${driver%%:*}
               branch=${driver##*:}
@@ -48,7 +48,8 @@ jobs:
               for dir in /lib/modules/*/build
               do
                 kernel=$(basename $(dirname ${dir}))
-                if make KERNELRELEASE=${kernel}; then
+                # -k: report every compile error at once
+                if make -k KERNELRELEASE=${kernel}; then
                   ls -la *.ko *.dtbo
                 else
                   failed="${failed} ${name}@${kernel}"
