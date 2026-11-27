@@ -27,7 +27,7 @@ jobs:
           commands: |
             set -eu
             apt-get update -y --allow-releaseinfo-change
-            apt-get install --no-install-recommends -y git gcc make device-tree-compiler libasound2-dev linux-image-rpi-v6 linux-headers-rpi-v6
+            apt-get install --no-install-recommends -y git gcc libc6-dev make device-tree-compiler libasound2-dev linux-image-rpi-v6 linux-headers-rpi-v6
             for dir in /lib/modules/*/build
             do
               if [ ! -x "${dir}/scripts/dtc/dtc" ]; then
