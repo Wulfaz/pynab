@@ -1,0 +1,64 @@
+name: 🔧 Drivers (Trixie)
+# Quick check that the kernel drivers build against the Trixie kernel
+# (linux-headers-rpi-v6), without building a whole image.
+on:
+  push:
+    branches:
+      - 'trixie'
+    paths:
+      - '.github/workflows/drivers-trixie.yml'
+      - 'setup'
+  workflow_dispatch:
+
+jobs:
+  build_drivers:
+    name: Build drivers (DietPi Trixie, armv6l)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build drivers in chroot environment
+        uses: pguyot/arm-runner-action@45f370abd7eed1b20397277e5ec0cb0a31adb026  # main 2026-09-26 (Ubuntu 26.04 runner support; no release tag yet)
+        with:
+          base_image: dietpi:rpi_armv6_trixie
+          cpu: arm1176
+          cpu_info: cpuinfo/raspberrypi_zero_w
+          image_additional_mb: 2048
+          optimize_image: no
+          shell: /bin/bash
+          commands: |
+            set -eu
+            apt-get update -y --allow-releaseinfo-change
+            apt-get install --no-install-recommends -y git gcc make device-tree-compiler libasound2-dev linux-image-rpi-v6 linux-headers-rpi-v6
+            for dir in /lib/modules/*/build
+            do
+              if [ ! -x "${dir}/scripts/dtc/dtc" ]; then
+                mkdir -p "${dir}/scripts/dtc"
+                ln -s /usr/bin/dtc "${dir}/scripts/dtc/dtc"
+              fi
+            done
+            ls -d /lib/modules/*/build
+            failed=""
+            for driver in pguyot/wm8960:tagtagtag-sound Wulfaz/tagtagtag-ears:kernel-6.18 Wulfaz/cr14:kernel-6.18 Wulfaz/st25r391x:kernel-6.18
+            do
+              repo=${driver%%:*}
+              branch=${driver##*:}
+              name=${repo##*/}
+              echo "::group::${repo} (${branch})"
+              git clone --depth 1 -b "${branch}" "https://github.com/${repo}" "/tmp/${name}"
+              cd "/tmp/${name}"
+              for dir in /lib/modules/*/build
+              do
+                kernel=$(basename $(dirname ${dir}))
+                if make KERNELRELEASE=${kernel}; then
+                  ls -la *.ko *.dtbo
+                else
+                  failed="${failed} ${name}@${kernel}"
+                fi
+                make clean KERNELRELEASE=${kernel} || true
+              done
+              cd /
+              echo "::endgroup::"
+            done
+            if [ -n "${failed}" ]; then
+              echo "Failed:${failed}"
+              exit 1
+            fi
